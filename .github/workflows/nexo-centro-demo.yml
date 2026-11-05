@@ -1,0 +1,60 @@
+name: Validar datos de demostracion Nexo Centro
+on:
+  push:
+    branches: [entrega-diagnostico-agendaclara-20261105]
+    paths:
+      - '.github/workflows/nexo-centro-demo.yml'
+      - 'entregas/nexo-centro-demo/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 12
+    steps:
+      - name: Obtener candidato sin conservar credenciales
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verificar copia, restauracion y vistas reales
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $PSNativeCommandUseErrorActionPreference=$false
+          $folder=Join-Path $env:GITHUB_WORKSPACE 'entregas/nexo-centro-demo'
+          $archive=Join-Path $folder 'NexoCentro-DEMO-con-datos.zip'
+          $expected=((Get-Content -LiteralPath (Join-Path $folder 'SHA256SUMS.txt')) -split '  ',2)[0]
+          if((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash-ne$expected){throw 'ZIP no coincide con su huella.'}
+          $destination=Join-Path $env:RUNNER_TEMP 'NexoDemo-Entrega'
+          Expand-Archive -LiteralPath $archive -DestinationPath $destination
+          $release=Join-Path $destination 'NexoCentro-DEMO-con-datos'
+          foreach($line in Get-Content -LiteralPath (Join-Path $release 'SHA256SUMS.txt')) {
+            $parts=$line-split'  ',2
+            $file=[IO.Path]::GetFullPath((Join-Path $release $parts[1]))
+            if(-not$file.StartsWith($release+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){throw 'Ruta de manifiesto no valida.'}
+            if((Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash-ne$parts[0]){throw "Archivo alterado: $($parts[1])"}
+          }
+          $results=Join-Path $env:RUNNER_TEMP 'NexoDemo-Resultados'
+          New-Item -ItemType Directory -Force -Path $results|Out-Null
+          $log=Join-Path $results 'demo-verificacion.txt'
+          & (Join-Path $release 'Pruebas/Nexo.Demo.Pruebas.exe') $release $results *> $log
+          $code=$LASTEXITCODE
+          Get-Content -LiteralPath $log|ForEach-Object{Write-Host $_}
+          if($code-ne0){
+            $message=((Select-String -LiteralPath $log -Pattern 'FALLO:|Exception:| at DemoTests'|Select-Object -Last 5|ForEach-Object{$_.Line})-join' | ').Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            Write-Host "::error title=NexoCentro-DEMO::$message"
+            throw 'La demo no se confirma.'
+          }
+          $summary=(Select-String -LiteralPath $log -Pattern 'RESUMEN:'|Select-Object -Last 1).Line
+          Write-Host "::notice title=NexoCentro-DEMO::$summary"
+      - name: Conservar comprobacion y capturas de la demo
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: resultados-nexo-demo
+          path: |
+            ${{ runner.temp }}/NexoDemo-Resultados/*.txt
+            ${{ runner.temp }}/NexoDemo-Resultados/*.png
+          retention-days: 14
+          if-no-files-found: warn
