@@ -1,5 +1,5 @@
-# AgendaClara — instalador completo 1.2.4
+# AgendaClara — instalador completo 1.2.4, candidato 2
 
-Cliente r2 incorporado. Paquete candidato pendiente de la ejecución de las baterías Windows de esta rama. No distribuir como validado hasta leer sus resultados.
+Cliente r2 incorporado sin cambios. La primera ejecución Windows pasó 23 comprobaciones de red y 60 de integración, pero detectó tres baterías fallidas. Este candidato corrige la preparación de claves TLS sintéticas y la restauración del cortafuegos.
 
-No modifica la instalación del colegio durante la compilación o las pruebas: se utilizan datos sintéticos y Windows efímero de GitHub.
+Pendiente de repetir la validación Windows. No distribuir como instalación general verificada hasta que todas las baterías terminen correctamente. Las pruebas utilizan sólo un Windows efímero de GitHub y datos sintéticos.
