@@ -1,0 +1,7 @@
+AgendaClara 4.0.4 - diagnóstico HTTP ampliado, 5 de noviembre de 2026.
+
+Esta entrega es de diagnóstico; el incidente real del colegio no está demostrado ni reparado.
+Descarga el ZIP completo y extrae todos sus archivos. Empieza por LEEME-PRIMERO.txt.
+No reinstales el servidor. Las pruebas reales Windows y Dirección-Jefatura siguen pendientes.
+Se han superado 33 comprobaciones sintéticas. El ZIP incluye informe y evidencias.
+No contiene contraseñas, claves privadas ni datos de la agenda real.
