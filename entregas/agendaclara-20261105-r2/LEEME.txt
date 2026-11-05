@@ -1,0 +1,9 @@
+AgendaClara 4.0.4-http-r2 — fallback seguro de direcciones.
+
+Descarga el ZIP completo y extráelo en una carpeta nueva de Dirección.
+Ejecuta Direccion-portatil/01-Probar-nombre.cmd y guarda el informe.
+Debe indicar revisión r2 y servidor configurado https://jefatura:7443.
+No actualices ni reinstales el servidor. No copies aún el cliente candidato.
+Pruebas de desarrollo: 32 de transporte y 33 de sesiones correctas.
+Pendiente: verificación real de r2 por nombre en el colegio y propagación de cambios.
+La revisión r1 se conserva en su carpeta anterior.
