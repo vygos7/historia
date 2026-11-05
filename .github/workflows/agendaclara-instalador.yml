@@ -1,0 +1,60 @@
+name: Validar instalador completo AgendaClara
+on:
+  push:
+    branches: [entrega-diagnostico-agendaclara-20261105]
+    paths:
+      - '.github/workflows/agendaclara-instalador.yml'
+      - 'entregas/agendaclara-instalador-1.2.4/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: agendaclara-instalador-1.2.4
+  cancel-in-progress: false
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 25
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+    steps:
+      - name: Obtener entrega sin conservar credenciales Git
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Preparar .NET 10
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          dotnet-version: '10.0.x'
+      - name: Ejecutar cinco baterías Windows aisladas
+        id: pruebas
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $folder=Join-Path $env:GITHUB_WORKSPACE 'entregas/agendaclara-instalador-1.2.4'
+          $archive=Join-Path $folder 'AgendaClara-4.0.4-instalador-completo-1.2.4.zip'
+          $expected=((Get-Content -LiteralPath (Join-Path $folder 'SHA256SUMS.txt')) -split '  ',2)[0]
+          if((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash-ne$expected){throw 'La entrega no coincide con su huella.'}
+          $destination=Join-Path $env:RUNNER_TEMP ('AgendaClara-Entrega-'+[Guid]::NewGuid().ToString('N'))
+          Expand-Archive -LiteralPath $archive -DestinationPath $destination
+          $release=Join-Path $destination 'AgendaClara-4.0.4-instalador-completo'
+          $results=Join-Path $env:RUNNER_TEMP 'AgendaClara-Resultados'
+          New-Item -ItemType Directory -Force -Path $results|Out-Null
+          Copy-Item -LiteralPath (Join-Path $release 'compilacion.json') -Destination (Join-Path $results 'compilacion-probada.json')
+          & (Join-Path $release 'Pruebas/Validar-Windows.ps1') -Entrega $release -Resultados $results
+      - name: Conservar sólo informes y registros de pruebas
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: resultados-instalador-1.2.4
+          path: ${{ runner.temp }}/AgendaClara-Resultados/
+          retention-days: 14
+          if-no-files-found: warn
+      - name: Resumir resultado
+        if: always()
+        shell: pwsh
+        run: |
+          $result='${{ steps.pruebas.outcome }}'
+          "## Instalador completo 1.2.4`nResultado de la etapa de pruebas: **$result**." | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8
+          $file=Join-Path $env:RUNNER_TEMP 'AgendaClara-Resultados/baterias.json'
+          if(Test-Path -LiteralPath $file){Get-Content -LiteralPath $file -Raw|Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append}
