@@ -40,7 +40,7 @@ jobs:
             $log=Join-Path $results ($name+'.txt')
             & $action *> $log
             if($LASTEXITCODE-ne0){
-              $message=((Get-Content $log|Select-Object -Last 10)-join' | ').Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+              $message=(((Select-String -LiteralPath $log -Pattern 'FALLO|Exception:|error ' | Select-Object -First 3 | ForEach-Object{$_.Line})+(Get-Content $log|Select-Object -Last 4))-join' | ').Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
               Write-Host "::error title=GoogleOAuth-${name}::$message"
               throw "Fallo: $name"
             }
