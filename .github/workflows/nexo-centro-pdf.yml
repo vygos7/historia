@@ -48,7 +48,7 @@ jobs:
             $script:checks+=@{name=$name;exitCode=$code;summaries=$summaries}
             $script:checks|ConvertTo-Json -Depth 6|Set-Content (Join-Path $results 'baterias.json')
             if($code-ne0){
-              $message=((Select-String -LiteralPath $log -Pattern 'FALLO|Exception:|error '|Select-Object -Last 5|ForEach-Object{$_.Line})-join' | ').Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+              $message=((Select-String -LiteralPath $log -Pattern 'FALLO|Exception:|error |at AgendaClara.Calendar|at LimpiezaTests'|Select-Object -Last 5|ForEach-Object{$_.Line})-join' | ').Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
               Write-Host "::error title=NexoCompleto-$name::$message";throw "Fallo: $name"
             }
             foreach($summary in $summaries){Write-Host "::notice title=NexoCompleto-$name::$summary"}
