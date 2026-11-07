@@ -1,0 +1,1 @@
+Nexo Centro 4.2.6. Corrección del PDF real de Sevilla: cuadrículas, colores y leyendas. Sin fechas administrativas ni calendario provincial en bases nuevas. 58 comprobaciones PDF correctas; validación Windows pendiente.
