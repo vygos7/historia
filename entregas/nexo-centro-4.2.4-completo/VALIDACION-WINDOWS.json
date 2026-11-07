@@ -1,0 +1,31 @@
+{
+  "version": "4.2.4",
+  "installerVersion": "1.2.10",
+  "state": "success",
+  "runner": "windows-2025",
+  "run": "https://github.com/vygos7/historia/actions/runs/42400995326",
+  "testedCommit": "906bf2f",
+  "checks": {
+    "pdfReader": 33,
+    "newInterfaceAndImport": 90,
+    "data": 109,
+    "originalInterface": 150,
+    "https": 32,
+    "sessions": 38,
+    "diagnosticsNet48": 33,
+    "networkAndSharedUi": 53,
+    "installerNetwork": 23,
+    "threeGeneratedClients": 60,
+    "windowsService": 57
+  },
+  "totalPassed": 678,
+  "failed": 0,
+  "pdfImportUiChecks": 26,
+  "testedZipSha256": "97d2ce9d38109d9a9bbf193453d5ee76d5fe65c06d751609a431dc9d615d0cc2",
+  "serverInstallerSha256": "9589b4be9618121b00f8be8194c6c5e74ecea095db11b6d8f0b90e6f20b497be",
+  "clientInstallerSha256": "bb9c199ce35619b49fd6b026058532dbee0a7347d995d40e997cf88def638842",
+  "serverSourceModified": false,
+  "schoolInstallationModified": false,
+  "supportedPdf": "Calendario provincial de Granada con texto y formato compatible, probado con Granada 2026/27",
+  "notSupported": "OCR, otros diseños/provincias, primer ciclo de Infantil y Deportivas. Los festivos municipales no contenidos deben completarse manualmente."
+}
