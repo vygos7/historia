@@ -7,7 +7,7 @@ on:
       - 'entregas/nexo-centro-4.2.2/**'
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   windows:
     runs-on: windows-2025
@@ -66,6 +66,28 @@ jobs:
           Check 'transporte' {dotnet run --project (Join-Path $source 'aplicacion/pruebas-transporte/AgendaClara.TransportTests.csproj') -c Release -- (Join-Path $base 'transporte')}
           Check 'sesiones' {dotnet run --project (Join-Path $source 'aplicacion/pruebas-sesion/AgendaClara.SessionTests.csproj') -c Release -- (Join-Path $base 'sesiones')}
           Write-Host '::notice title=Nexo422-Estado::Interfaz de informes Modelo A validada en Windows. No se actualiza el servidor.'
+      - name: Publicar capturas y resumen de la validación
+        if: success()
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference='Stop'
+          if($env:GITHUB_REF-ne'refs/heads/nexo-centro-4.2.2-informes'){throw 'Rama inesperada.'}
+          $results=Join-Path $env:RUNNER_TEMP 'NexoCentro422-Resultados'
+          $summaries=@(Get-ChildItem $results -Filter '*.txt'|ForEach-Object{Select-String -LiteralPath $_.FullName -Pattern 'RESUMEN:'|ForEach-Object{$_.Line}})
+          $client=Join-Path $env:RUNNER_TEMP 'NexoCentro422-Validacion/NexoCentro-4.2.2/Demo/Programa/AgendaClara.exe'
+          $report=Join-Path $results 'WINDOWS.json'
+          [ordered]@{state='success';run="https://github.com/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID";sourceCommit=$env:GITHUB_SHA;clientSha256=(Get-FileHash $client -Algorithm SHA256).Hash;summaries=$summaries;serverUpdated=$false}|ConvertTo-Json -Depth 5|Set-Content -LiteralPath $report -Encoding utf8
+          $headers=@{Authorization="Bearer $env:GITHUB_TOKEN";Accept='application/vnd.github+json'}
+          foreach($file in @((Join-Path $results 'capturas/modelo-A-1100.png'),(Join-Path $results 'capturas/modelo-A-800.png'),$report)){
+            $name=[IO.Path]::GetFileName($file)
+            $url="https://api.github.com/repos/$env:GITHUB_REPOSITORY/contents/entregas/nexo-centro-4.2.2/validacion/$name"
+            $old=Invoke-RestMethod -Uri ($url+'?ref=nexo-centro-4.2.2-informes') -Headers $headers -SkipHttpErrorCheck -StatusCodeVariable code
+            $body=@{message="Guardar evidencia Windows 4.2.2: $name [skip ci]";branch='nexo-centro-4.2.2-informes';content=[Convert]::ToBase64String([IO.File]::ReadAllBytes($file))}
+            if($code-eq200){$body.sha=$old.sha}elseif($code-ne404){throw "No se pudo consultar $name; HTTP $code"}
+            $null=Invoke-RestMethod -Uri $url -Headers $headers -Method Put -ContentType 'application/json' -Body ($body|ConvertTo-Json -Compress)
+          }
       - name: Conservar informes y capturas
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
