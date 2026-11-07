@@ -1,0 +1,102 @@
+name: Validar Nexo Centro completo 4.2.5
+on:
+  push:
+    branches: [nexo-centro-4.2.5-pdf-general]
+    paths:
+      - '.github/workflows/nexo-centro-pdf-general.yml'
+      - 'entregas/nexo-centro-4.2.5-completo/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 35
+    steps:
+      - name: Obtener entrega
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Preparar .NET 10
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          dotnet-version: '10.0.x'
+      - name: Probar instalación vacía, clientes, interfaz y regresiones
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop';$PSNativeCommandUseErrorActionPreference=$false
+          if($env:RUNNER_ENVIRONMENT-ne'github-hosted'){throw 'Solo se permiten máquinas efímeras de GitHub.'}
+          $folder=Join-Path $env:GITHUB_WORKSPACE 'entregas/nexo-centro-4.2.5-completo'
+          $zip=Join-Path $folder 'NexoCentro-4.2.5-completo.zip'
+          $expected=((Get-Content (Join-Path $folder 'SHA256SUMS.txt'))-split'  ',2)[0]
+          if((Get-FileHash $zip -Algorithm SHA256).Hash-ne$expected){throw 'ZIP alterado.'}
+          $base=Join-Path $env:RUNNER_TEMP 'NexoCentro425-Completo'
+          Expand-Archive -LiteralPath $zip -DestinationPath $base
+          $release=Join-Path $base 'NexoCentro-4.2.5-completo'
+          foreach($line in Get-Content (Join-Path $release 'SHA256SUMS.txt')){
+            $parts=$line-split'  ',2;$file=[IO.Path]::GetFullPath((Join-Path $release $parts[1]))
+            if(-not$file.StartsWith($release+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){throw 'Ruta no válida.'}
+            if((Get-FileHash $file -Algorithm SHA256).Hash-ne$parts[0]){throw "Archivo alterado: $($parts[1])"}
+          }
+          Expand-Archive -LiteralPath (Join-Path $release 'Fuentes/NexoCentro-4.2.5-completo-fuentes.zip') -DestinationPath (Join-Path $base 'fuentes')
+          $source=Join-Path $base 'fuentes/NexoCentro-4.2.5-completo-fuentes'
+          $results=Join-Path $env:RUNNER_TEMP 'NexoCentro425-Completo-Resultados';New-Item -ItemType Directory -Path $results|Out-Null
+          $script:checks=@()
+          function Check([string]$name,[scriptblock]$action){
+            $log=Join-Path $results ($name+'.txt');& $action *> $log;$code=$LASTEXITCODE
+            $summaries=@(Select-String -LiteralPath $log -Pattern 'RESUMEN:'|ForEach-Object{$_.Line})
+            $script:checks+=@{name=$name;exitCode=$code;summaries=$summaries}
+            $script:checks|ConvertTo-Json -Depth 6|Set-Content (Join-Path $results 'baterias.json')
+            if($code-ne0){
+              $message=((Select-String -LiteralPath $log -Pattern 'FALLO|Exception:|error |at AgendaClara.Calendar|at LimpiezaTests'|Select-Object -Last 5|ForEach-Object{$_.Line})-join' | ').Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+              Write-Host "::error title=NexoCompleto-$name::$message";throw "Fallo: $name"
+            }
+            foreach($summary in $summaries){Write-Host "::notice title=NexoCompleto-$name::$summary"}
+          }
+          $payload=Join-Path $results 'payload-root/cliente';New-Item -ItemType Directory -Path $payload -Force|Out-Null
+          $assembly=[Reflection.Assembly]::LoadFile((Join-Path $release 'Instalar-NexoCentro-Servidor.exe'))
+          $stream=$assembly.GetManifestResourceStream('AgendaClara.Setup.ClientPayload')
+          $clientZip=Join-Path $base 'cliente.zip';$output=[IO.File]::Create($clientZip);$stream.CopyTo($output);$output.Dispose();$stream.Dispose()
+          Expand-Archive -LiteralPath $clientZip -DestinationPath (Join-Path $base 'payload')
+          Copy-Item -Path (Join-Path $base 'payload/cliente/*') -Destination $payload
+          $stream=$assembly.GetManifestResourceStream('AgendaClara.Setup.Client');$output=[IO.File]::Create((Join-Path $base 'cliente-interno.exe'));$stream.CopyTo($output);$output.Dispose();$stream.Dispose()
+          if((Get-FileHash (Join-Path $base 'cliente-interno.exe')).Hash-ne(Get-FileHash (Join-Path $release 'Instalar-NexoCentro-Cliente.exe')).Hash){throw 'El generador no incluye el mismo instalador cliente.'}
+          function CopyClient([string]$dest){Get-ChildItem $payload -File|Where-Object{$_.Name-ne'manifiesto.json'}|Copy-Item -Destination $dest -Force}
+          Check 'pdf-lectura-extraccion' {dotnet run --project (Join-Path $source 'aplicacion/pruebas-pdf-core/Nexo.Pdf.CoreTests.csproj') -c Release -p:NuGetAudit=false}
+          $clean=Join-Path $results 'herramientas-limpieza'
+          Check 'compilar-interfaz' {dotnet build (Join-Path $source 'aplicacion/pruebas-limpieza/Nexo.Limpieza.Pruebas.csproj') -c Release -o $clean -p:NuGetAudit=false}
+          CopyClient $clean
+          Check 'modelo-A' {& (Join-Path $clean 'AgendaClara.Pruebas.exe') (Join-Path $results 'capturas') (Join-Path $release 'Instalar-NexoCentro-Cliente.exe')}
+          $reg=Join-Path $results 'herramientas-regresion'
+          Check 'compilar-regresion' {dotnet build (Join-Path $source 'aplicacion/pruebas-locales.csproj') -c Release -o $reg -p:NuGetAudit=false}
+          CopyClient $reg
+          Check 'datos-interfaz' {& (Join-Path $reg 'AgendaClara.Pruebas.exe') (Join-Path $base 'regresion')}
+          Check 'transporte' {dotnet run --project (Join-Path $source 'aplicacion/pruebas-transporte/AgendaClara.TransportTests.csproj') -c Release -p:NuGetAudit=false -- (Join-Path $base 'transporte')}
+          Check 'sesiones' {dotnet run --project (Join-Path $source 'aplicacion/pruebas-sesion/AgendaClara.SessionTests.csproj') -c Release -p:NuGetAudit=false -- (Join-Path $base 'sesiones')}
+          $probe=Join-Path $results 'probe';$diag=Join-Path $results 'diagnostico';$shared=Join-Path $results 'shared'
+          Check 'compilar-probe' {dotnet build (Join-Path $source 'aplicacion/servidor-pruebas/AgendaClara.ProbeHost.csproj') -c Release -o $probe -p:NuGetAudit=false}
+          Check 'compilar-diagnostico' {dotnet build (Join-Path $source 'aplicacion/pruebas-diagnostico/AgendaClara.Diagnostics.Tests.csproj') -c Release -o $diag -p:NuGetAudit=false}
+          CopyClient $diag
+          Check 'diagnostico-net48' {& (Join-Path $diag 'AgendaClara.Diagnostics.Tests.exe') (Join-Path $base 'diagnostico') 'dotnet' (Join-Path $probe 'AgendaClara.ProbeHost.dll')}
+          Check 'compilar-interfaz-red' {dotnet build (Join-Path $source 'aplicacion/pruebas-interfaz-red/AgendaClara.SharedUI.Tests.csproj') -c Release -o $shared -p:NuGetAudit=false}
+          CopyClient $shared
+          $fixture=Join-Path $source 'aplicacion/pruebas/fixtures/agenda-v4-sintetica.sqlite3'
+          Check 'sincronizacion-interfaz' {dotnet run --project (Join-Path $source 'aplicacion/pruebas-red/AgendaClara.NetworkTests.csproj') -c Release -p:NuGetAudit=false -- (Join-Path $base 'red') $fixture (Join-Path $shared 'AgendaClara.SharedUI.Tests.exe')}
+          $setup=Join-Path $results 'instalador-tests'
+          Check 'compilar-instalador-tests' {& (Join-Path $source 'instalador/Compilar-Pruebas.ps1') -Salida $setup}
+          Check 'cortafuegos' {& (Join-Path $setup 'RedTests.exe') (Join-Path $base 'firewall')}
+          Check 'instaladores-tres-puestos' {& (Join-Path $setup 'SimpleTests.exe') (Join-Path $base 'instaladores') $fixture (Join-Path $release 'Instalar-NexoCentro-Servidor.exe')}
+          Check 'servicio-desde-cero' {& (Join-Path $setup 'ServerInstallTests.exe') (Join-Path $base 'servicio') (Join-Path $release 'Instalar-NexoCentro-Servidor.exe') $fixture}
+          Write-Host '::notice title=NexoCompleto-Estado::Instalación desde cero, servicio real, cortafuegos y clientes validados. Nunca se ha accedido a un colegio.'
+      - name: Conservar resultados y capturas ficticias
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: nexo-centro-425-completo-resultados
+          path: |
+            ${{ runner.temp }}/NexoCentro425-Completo-Resultados/*.txt
+            ${{ runner.temp }}/NexoCentro425-Completo-Resultados/baterias.json
+            ${{ runner.temp }}/NexoCentro425-Completo-Resultados/capturas/*.png
+            ${{ runner.temp }}/NexoCentro425-Completo-Resultados/capturas/*.pdf
+          retention-days: 14
+          if-no-files-found: warn
