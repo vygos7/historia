@@ -3,7 +3,7 @@ on:
   push:
     branches: [nexo-centro-4.2.2-informes]
     paths:
-      - '.github/workflows/nexo-centro-limpieza.yml'
+      - '.github/workflows/nexo-centro-informes.yml'
       - 'entregas/nexo-centro-4.2.2/**'
   workflow_dispatch:
 permissions:
