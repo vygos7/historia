@@ -1,0 +1,30 @@
+{
+  "version": "4.2.5",
+  "installerVersion": "1.2.11",
+  "state": "success",
+  "runner": "windows-2025",
+  "run": "https://github.com/vygos7/historia/actions/runs/42406064503",
+  "testedCommit": "d4c13d0100bcddbd4d4e2e880e40e8acf58b6cd9",
+  "checks": {
+    "pdfReader": 44,
+    "newInterfaceAndImport": 97,
+    "data": 109,
+    "originalInterface": 150,
+    "https": 32,
+    "sessions": 38,
+    "diagnosticsNet48": 33,
+    "networkAndSharedUi": 53,
+    "installerNetwork": 23,
+    "threeGeneratedClients": 60,
+    "windowsService": 57
+  },
+  "totalPassed": 696,
+  "failed": 0,
+  "testedZipSha256": "eabb59f3dfd06a135e66e33306dff7dcd59d099b5b929494e6235e997731d01a",
+  "clientInstallerSha256": "c348c3f91114d667c3aab2ed73ffdf2f3f5810039b74ff0b636e34296fbc8cd7",
+  "serverInstallerSha256": "ce218032058623ede2d4c1473504c35d3994c95cf32a61a164e7395aaef30ff2",
+  "serverSourceModified": false,
+  "schoolInstallationModified": false,
+  "supportedPdf": "Sin restricción geográfica. Fechas textuales reconocibles, rangos y tablas; revisión editable. PDF real Granada y documentos sintéticos de otros diseños/provincias.",
+  "limitations": "No se garantiza lectura automática de todos los diseños. Sin OCR: las fechas que solo aparecen en imágenes o colores deben completarse en la revisión. Revisar festivos municipales."
+}
