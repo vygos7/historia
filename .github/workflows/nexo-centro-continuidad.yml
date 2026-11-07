@@ -1,0 +1,78 @@
+name: Validar Nexo Centro 4.2.3
+on:
+  push:
+    branches: [nexo-centro-4.2.3-continuidad]
+    paths:
+      - '.github/workflows/nexo-centro-continuidad.yml'
+      - 'entregas/nexo-centro-4.2.3/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 25
+    steps:
+      - name: Obtener entrega sin conservar credenciales
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Preparar .NET 10
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          dotnet-version: '10.0.x'
+      - name: Verificar cliente distribuido, ausencia de integración y regresiones
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $PSNativeCommandUseErrorActionPreference=$false
+          $folder=Join-Path $env:GITHUB_WORKSPACE 'entregas/nexo-centro-4.2.3'
+          $zip=Join-Path $folder 'NexoCentro-4.2.3.zip'
+          $expected=((Get-Content (Join-Path $folder 'SHA256SUMS.txt'))-split'  ',2)[0]
+          if((Get-FileHash $zip -Algorithm SHA256).Hash-ne$expected){throw 'Huella de entrega incorrecta.'}
+          $base=Join-Path $env:RUNNER_TEMP 'NexoCentro423-Validacion'
+          Expand-Archive -LiteralPath $zip -DestinationPath $base
+          $release=Join-Path $base 'NexoCentro-4.2.3'
+          foreach($line in Get-Content (Join-Path $release 'SHA256SUMS.txt')){
+            $parts=$line-split'  ',2
+            $file=[IO.Path]::GetFullPath((Join-Path $release $parts[1]))
+            if(-not$file.StartsWith($release+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){throw 'Ruta de manifiesto incorrecta.'}
+            if((Get-FileHash $file -Algorithm SHA256).Hash-ne$parts[0]){throw "Archivo alterado: $($parts[1])"}
+          }
+          Expand-Archive -LiteralPath (Join-Path $release 'Fuentes/NexoCentro-4.2.3-fuentes.zip') -DestinationPath (Join-Path $base 'fuentes')
+          $source=Join-Path $base 'fuentes/NexoCentro-4.2.3-fuentes'
+          $results=Join-Path $env:RUNNER_TEMP 'NexoCentro423-Resultados'
+          New-Item -ItemType Directory -Force -Path $results|Out-Null
+          function Check([string]$name,[scriptblock]$action){
+            $log=Join-Path $results ($name+'.txt')
+            & $action *> $log
+            if($LASTEXITCODE-ne0){
+              $message=(((Select-String -LiteralPath $log -Pattern 'FALLO|Exception:|error ' |Select-Object -First 3|ForEach-Object{$_.Line})+(Get-Content $log|Select-Object -Last 4))-join' | ').Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+              Write-Host "::error title=Nexo423-${name}::$message"
+              throw "Fallo: $name"
+            }
+            $summary=(Select-String -LiteralPath $log -Pattern 'RESUMEN:'|Select-Object -Last 1).Line
+            if($summary){Write-Host "::notice title=Nexo423-${name}::$summary"}
+          }
+          $tools=Join-Path $results 'herramientas-limpieza'
+          Check 'compilar-limpieza' {dotnet build (Join-Path $source 'aplicacion/pruebas-limpieza/Nexo.Limpieza.Pruebas.csproj') -c Release -o $tools}
+          # Ejecutar contra el EXE y DLL del ZIP entregado, no sólo contra una recompilación.
+          Copy-Item -Path (Join-Path $release 'Demo/Programa/*') -Destination $tools -Force
+          Check 'limpieza-interfaz' {& (Join-Path $tools 'AgendaClara.Pruebas.exe') (Join-Path $results 'capturas') (Join-Path $release 'Instalar-NexoCentro-Cliente.exe')}
+          $regression=Join-Path $results 'herramientas-regresion'
+          Check 'compilar-regresion' {dotnet build (Join-Path $source 'aplicacion/pruebas-locales.csproj') -c Release -o $regression}
+          Copy-Item -Path (Join-Path $release 'Demo/Programa/*') -Destination $regression -Force
+          Check 'regresion-wpf' {& (Join-Path $regression 'AgendaClara.Pruebas.exe') (Join-Path $base 'datos-regresion')}
+          Check 'transporte' {dotnet run --project (Join-Path $source 'aplicacion/pruebas-transporte/AgendaClara.TransportTests.csproj') -c Release -- (Join-Path $base 'transporte')}
+          Check 'sesiones' {dotnet run --project (Join-Path $source 'aplicacion/pruebas-sesion/AgendaClara.SessionTests.csproj') -c Release -- (Join-Path $base 'sesiones')}
+          Write-Host '::notice title=Nexo423-Estado::Filtro de continuidad validado en Windows. No se actualiza el servidor.'
+      - name: Conservar informes y capturas
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: nexo-centro-423-resultados
+          path: |
+            ${{ runner.temp }}/NexoCentro423-Resultados/*.txt
+            ${{ runner.temp }}/NexoCentro423-Resultados/capturas/*.png
+          retention-days: 14
+          if-no-files-found: warn
