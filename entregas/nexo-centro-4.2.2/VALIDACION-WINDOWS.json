@@ -1,0 +1,22 @@
+{
+  "version": "4.2.2",
+  "state": "success",
+  "run": "https://github.com/vygos7/historia/actions/runs/42375500627",
+  "runner": "windows-2025",
+  "testedCommit": "452bb7e",
+  "checks": {
+    "newInterfaceAndCleanup": 43,
+    "data": 109,
+    "originalInterface": 150,
+    "httpsNet10": 32,
+    "sessionsNet10": 38
+  },
+  "totalPassed": 372,
+  "failed": 0,
+  "clientSha256": "7ff2f683325b8bd49b4af650c103c2288d3a1f7e75495bef9d67e27cca85e58f",
+  "installerSha256": "1c067a056b367c7e0b34485831b1b89f893f286d9fe7ee9a5fe35bb6db81d83d",
+  "testedZipSha256": "86eb04ffe1be529d0634d606a1228e79a88ab0ac5abe0466917ccfb1b27136cd",
+  "serverUpdated": false,
+  "schoolNetworkTested": false,
+  "screenshots": "Artefacto nexo-centro-422-resultados de la ejecución Actions. Capturas WPF a 1100 y 800 píxeles lógicos."
+}
