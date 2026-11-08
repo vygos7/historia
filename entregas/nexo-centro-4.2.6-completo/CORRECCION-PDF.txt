@@ -1,0 +1,15 @@
+CORRECCIÓN 4.2.6
+
+Se ha reproducido el fallo con el archivo real de Sevilla CALENDARIO 26_27(F).pdf.
+Primaria: 10/09/2026 a 23/06/2027. Navidad: 24/12/2026 a 07/01/2027.
+Semana Santa: 22/03/2027 a 28/03/2027. No lectivo provincial: 08/01/2027.
+Total provincial: 182 días en Primaria y 179 en Secundaria, antes de los cuatro días municipales por concretar.
+La firma, el código de verificación y las notas de cómputo no se importan como fechas.
+
+Los trimestres son propuestas por vacaciones, NO límites oficiales. El PDF muestra cómputos 71/51/60; dividir por vacaciones da 71/48/63. Revisa sus límites si necesitas reproducir el reparto oficial.
+
+No hay filtro por provincia ni paleta de colores fija. La lectura de cuadrículas exige coordenadas de días verificadas y leyendas inequívocas. No interpreta automáticamente todos los diseños ni realiza OCR.
+
+Las agendas NUEVAS no reciben el calendario de Huelva. Las existentes mantienen su configuración. La demo usa el perfil separado NexoCentroDemo426 sin calendario provincial inicial.
+
+Para actualizar una instalación existente basta el instalador de CLIENTE. No se requiere reinstalar el servidor.

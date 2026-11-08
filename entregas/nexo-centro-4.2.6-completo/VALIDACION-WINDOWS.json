@@ -1,0 +1,31 @@
+{
+  "version": "4.2.6",
+  "installerVersion": "1.2.12",
+  "state": "success",
+  "runner": "windows-2025",
+  "run": "https://github.com/vygos7/historia/actions/runs/42423917143",
+  "testedCommit": "f4ddcda",
+  "checks": {
+    "pdfReader": 59,
+    "newInterfaceAndImport": 105,
+    "data": 109,
+    "originalInterface": 150,
+    "https": 32,
+    "sessions": 38,
+    "diagnosticsNet48": 33,
+    "networkAndSharedUi": 53,
+    "installerNetwork": 23,
+    "threeGeneratedClients": 60,
+    "windowsService": 57
+  },
+  "totalPassed": 719,
+  "failed": 0,
+  "testedZipSha256": "8a615ffa8083dec21b2973d02e452b6c1c74cf1166f544ec3326a862f1944eb1",
+  "clientInstallerSha256": "13038d74bf866c7252b2c398dcd12bdf057006536cbb18682a0d144d52ba88de",
+  "serverInstallerSha256": "a76444099f75a6970b6ea6ec355068ea8fceb55cef2ac3c7c8a9f9a2da9127ae",
+  "schoolInstallationModified": false,
+  "networkProtocolModified": false,
+  "serverChange": "Solo el calendario inicial vacío de una base nueva, compartido en Store.cs. Las agendas existentes conservan su configuración.",
+  "supportedPdf": "Documentos reales de Sevilla y Granada; textos sintéticos de otros diseños/provincias. Cuadrículas vectoriales verificadas y colores asociados a leyendas, sin filtro provincial.",
+  "limitations": "No garantiza lectura automática de cualquier diseño. Sin OCR; revisar fechas no detectadas y festivos municipales. Los trimestres por vacaciones son propuestas y pueden diferir del cómputo trimestral oficial."
+}
